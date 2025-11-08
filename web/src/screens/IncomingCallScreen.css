@@ -1,0 +1,54 @@
+.call-avatar.incoming {
+  background: #2196F3;
+}
+
+.call-actions-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 60px;
+  gap: 40px;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.reject-button,
+.accept-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 35px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  transition: transform 0.2s;
+}
+
+.reject-button {
+  background: #f44336;
+}
+
+.accept-button {
+  background: #4CAF50;
+}
+
+.reject-button:hover,
+.accept-button:hover {
+  transform: scale(1.1);
+}
+
+.reject-button:active,
+.accept-button:active {
+  transform: scale(0.95);
+}
+
+.action-icon {
+  color: white;
+  font-size: 32px;
+  font-weight: bold;
+}

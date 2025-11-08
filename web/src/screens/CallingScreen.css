@@ -1,0 +1,94 @@
+.call-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #1a1a1a;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 60px 20px;
+}
+
+.call-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 60px;
+  background: #4CAF50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 48px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  transition: transform 0.3s ease;
+}
+
+.call-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.call-status {
+  font-size: 18px;
+  color: #aaa;
+}
+
+.call-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.end-call-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 35px;
+  background: #f44336;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  transition: transform 0.2s;
+}
+
+.end-call-button:hover {
+  transform: scale(1.1);
+}
+
+.end-call-button:active {
+  transform: scale(0.95);
+}
+
+.end-icon {
+  color: white;
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.action-label {
+  color: white;
+  font-size: 16px;
+}
