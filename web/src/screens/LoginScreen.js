@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
+import { AVAILABLE_USERS } from '../config/users';
 import './LoginScreen.css';
-
-const AVAILABLE_USERS = [
-  { id: 'user1', name: 'Alice Johnson' },
-  { id: 'user2', name: 'Bob Smith' },
-  { id: 'user3', name: 'Charlie Brown' },
-  { id: 'user4', name: 'Diana Prince' },
-  { id: 'user5', name: 'Ethan Hunt' }
-];
 
 const LoginScreen = ({ onLogin }) => {
   const [selectedUser, setSelectedUser] = useState('');
@@ -98,7 +91,7 @@ const LoginScreen = ({ onLogin }) => {
               </div>
               <div className="user-select-info">
                 <div className="user-select-name">{user.name}</div>
-                <div className="user-select-id">{user.id}</div>
+                <div className="user-select-id">User ID: {user.id}</div>
               </div>
               {selectedUser === user.id && (
                 <div className="check-icon">✓</div>

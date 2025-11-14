@@ -1,129 +1,291 @@
-# Troubleshooting Microphone Permission Issues
+# Troubleshooting Guide
 
-## Problem: "Microphone access denied" without browser prompt
+## Common Issues and Solutions
 
-### Solution 1: Use localhost (Recommended)
-Browsers require HTTPS or localhost for microphone access.
+### 1. "Call already in progress" (CONFLICT 409)
 
-**Run the app properly:**
-```bash
-cd web
-npm start
+**Symptom:**
+```
+callHistory: {status: 'CONFLICT', statusCode: 409, message: 'Call already in progress'}
 ```
 
-This will automatically open `http://localhost:3000` which is allowed by browsers.
+**Cause:** There's an incomplete call record in the database from a previous call that wasn't properly ended.
 
-### Solution 2: Check if permission was previously blocked
+**Solution:**
+Run this SQL to clean up stuck calls:
+```sql
+UPDATE call_history 
+SET call_end_time = NOW(),
+    is_not_answered = true
+WHERE call_end_time IS NULL;
+```
 
-**Chrome:**
-1. Click the 🔒 lock icon (or ⓘ info icon) in the address bar
-2. Find "Microphone" in the permissions list
-3. Change from "Block" to "Allow"
-4. Refresh the page
-5. Click "Allow Microphone Access" button again
+Or use the provided script:
+```bash
+# Run in your database client
+mysql -u your_user -p your_database < cleanup_stuck_calls.sql
+```
 
-**Firefox:**
-1. Click the 🔒 lock icon in the address bar
-2. Click the arrow next to "Blocked" or "Connection Secure"
-3. Find "Use the Microphone"
-4. Click "X" to clear blocked permissions
-5. Refresh the page
-6. Click "Allow Microphone Access" button again
+**Prevention:** The frontend now handles this automatically by showing an alert and cleaning up the UI state.
 
-**Edge:**
-1. Click the 🔒 lock icon in the address bar
-2. Click "Permissions for this site"
-3. Find "Microphone"
-4. Change to "Allow"
-5. Refresh the page
-6. Click "Allow Microphone Access" button again
+---
 
-### Solution 3: Reset site permissions
+### 2. WebSocket Keeps Disconnecting
 
-**Chrome:**
-1. Go to `chrome://settings/content/microphone`
-2. Find your site in the "Block" list
-3. Click the trash icon to remove it
-4. Refresh your app
-5. Try again
+**Symptom:**
+```
+✅ WebSocket Connected successfully
+❌ WebSocket Disconnected (immediately after)
+```
 
-**Firefox:**
-1. Go to `about:preferences#privacy`
-2. Scroll to "Permissions" → "Microphone"
-3. Click "Settings"
-4. Find your site and remove it
-5. Refresh your app
-6. Try again
+**Causes:**
+1. React Strict Mode creating duplicate connections
+2. Browser tab going to sleep
+3. Network issues
+4. Backend STOMP broker relay issues
 
-### Solution 4: Check if microphone is available
+**Solutions:**
 
-**Windows:**
-1. Right-click the speaker icon in taskbar
-2. Select "Sound settings"
-3. Scroll to "Input"
-4. Make sure a microphone is selected and working
-5. Test your microphone
+**A. React Strict Mode (Development Only)**
+- This is normal in development mode
+- React Strict Mode intentionally double-mounts components
+- The code now handles this by checking for existing connections
+- In production build, this won't happen
 
-**Mac:**
-1. Open System Preferences
-2. Go to "Sound" → "Input"
-3. Make sure a microphone is selected
-4. Check the input level
+**B. Backend STOMP Broker**
+Check your backend logs for:
+```
+TCP connection failure in session: failed to forward DISCONNECT
+reactor.netty.channel.AbortedException
+```
 
-### Solution 5: Check if another app is using the microphone
+If you see this, your STOMP broker relay might be misconfigured. Check `WebSocketConfig.java`:
+```java
+@Override
+public void configureMessageBroker(MessageBrokerRegistry config) {
+    config.enableSimpleBroker("/topic");  // Use simple broker for testing
+    config.setApplicationDestinationPrefixes("/app");
+}
+```
 
-Close these apps if running:
-- Zoom
-- Microsoft Teams
-- Skype
-- Discord
-- OBS Studio
-- Any other video/audio recording software
+**C. Network/Firewall**
+- Ensure port 8008 is not blocked
+- Check if WebSocket connections are allowed
+- Try disabling VPN/proxy temporarily
 
-### Solution 6: Try a different browser
+---
 
-If one browser isn't working, try:
-- Google Chrome
-- Mozilla Firefox
-- Microsoft Edge
+### 3. "Sender Not Found" or "Receiver Not Found"
 
-### Solution 7: Check browser console for errors
+**Symptom:**
+```
+=== WEBSOCKET EXCEPTION ===
+Exception: Sender Not Found
+```
 
-1. Press F12 to open Developer Tools
-2. Go to "Console" tab
-3. Click "Allow Microphone Access" button
-4. Look for error messages
-5. Share the error message for further help
+**Solution:** See `DATABASE_SETUP_GUIDE.md` or `QUICK_FIX.md`
 
-## Common Error Messages
+Quick fix:
+```sql
+INSERT INTO user_master (user_id, name, email, password, status, is_online, created_at) 
+VALUES 
+  (1, 'User 1', 'user1@example.com', 'password', 'ACTIVE', false, NOW()),
+  (2, 'User 2', 'user2@example.com', 'password', 'ACTIVE', false, NOW());
+```
 
-### "NotAllowedError" or "PermissionDeniedError"
-- You clicked "Block" on the permission prompt
-- Follow Solution 2 or 3 above
+---
 
-### "NotFoundError"
-- No microphone detected
-- Follow Solution 4 above
+### 4. Multiple WebSocket Connections
 
-### "NotReadableError"
-- Microphone is being used by another app
-- Follow Solution 5 above
+**Symptom:**
+```
+=== 🎉 WEBSOCKET CONNECTED SUCCESSFUL 🎉 ===
+Session ID: 01zksvm4
+=== 🎉 WEBSOCKET CONNECTED SUCCESSFUL 🎉 ===
+Session ID: zifj4djl  (duplicate for same user)
+```
 
-### "NotSupportedError"
-- Not using HTTPS or localhost
-- Follow Solution 1 above
+**Cause:** React Strict Mode or multiple browser tabs
 
-## Still Not Working?
+**Solutions:**
+1. **React Strict Mode:** Normal in development, fixed in code
+2. **Multiple Tabs:** Each tab creates its own connection (expected behavior)
+3. **Backend Cleanup:** The backend now removes old sessions when a new one connects
 
-1. Restart your browser completely
-2. Restart your computer
-3. Update your browser to the latest version
-4. Check if your antivirus is blocking microphone access
-5. Try running the app with: `npm start` (not opening the HTML file directly)
+---
 
-## Testing Microphone
+### 5. Call Timeout Not Working
 
-Visit this site to test if your microphone works in the browser:
-https://www.onlinemictest.com/
+**Symptom:** Call stays in "calling" or "incoming" state forever
 
-If it doesn't work there, the issue is with your system/browser, not the app.
+**Solution:** The timeout is set to 30 seconds. If it's not working:
+1. Check browser console for errors
+2. Ensure `callTimeoutTimer` is being set
+3. Verify `handleCallTimeout` is being called
+
+To test:
+```javascript
+// In CallContext.js, temporarily reduce timeout
+callTimeoutTimer.current = setTimeout(() => {
+  handleCallTimeout();
+}, 5000); // 5 seconds for testing
+```
+
+---
+
+### 6. No Incoming Call Notification
+
+**Symptom:** User 1 calls User 2, but User 2 doesn't see incoming call
+
+**Checklist:**
+- ✅ Both users are logged in
+- ✅ Both WebSocket connections are active
+- ✅ User IDs exist in database
+- ✅ No "Call already in progress" error
+- ✅ Backend shows "CALL INITIATE" log
+- ✅ Check browser console on User 2's side for incoming message
+
+**Debug:**
+Open browser console on User 2's side and look for:
+```
+Incoming message: {"signalType": "call-request", ...}
+```
+
+If you don't see this, check:
+1. Backend logs for errors
+2. WebSocket subscription: `/topic/call/2`
+3. Network tab for WebSocket frames
+
+---
+
+### 7. Audio Not Working
+
+**Symptom:** Call connects but no audio
+
+**Solutions:**
+1. **Check Microphone Permission:**
+   - Browser should show microphone icon in address bar
+   - Click and ensure "Allow" is selected
+
+2. **Check Audio Elements:**
+   ```javascript
+   // In browser console
+   document.querySelector('audio').srcObject
+   // Should show MediaStream object
+   ```
+
+3. **Check WebRTC Connection:**
+   ```javascript
+   // In browser console during call
+   // Should show "connected"
+   ```
+
+4. **Test Microphone:**
+   - Go to chrome://settings/content/microphone
+   - Ensure your site is allowed
+
+---
+
+### 8. Video Call Not Working
+
+**Symptom:** Video call initiated but no video
+
+**Solutions:**
+1. Check camera permission (same as microphone)
+2. Verify video elements exist:
+   ```javascript
+   document.querySelector('.local-video')
+   document.querySelector('.remote-video')
+   ```
+3. Check if video tracks are enabled:
+   ```javascript
+   localStream.getVideoTracks()[0].enabled // Should be true
+   ```
+
+---
+
+## Quick Diagnostic Commands
+
+### Check Database State
+```sql
+-- Check users
+SELECT user_id, name, status, is_online FROM user_master WHERE user_id IN (1, 2);
+
+-- Check ongoing calls
+SELECT * FROM call_history WHERE call_end_time IS NULL;
+
+-- Check recent calls
+SELECT * FROM call_history ORDER BY call_initiated_time DESC LIMIT 5;
+```
+
+### Check Redis State (if using Redis)
+```bash
+redis-cli
+KEYS busy:*
+KEYS session:*
+GET busy:1
+GET session:01zksvm4
+```
+
+### Check Backend Logs
+Look for:
+- `=== 🎉 WEBSOCKET CONNECTED SUCCESSFUL 🎉 ===`
+- `=== CALL INITIATE ===`
+- `=== WEBSOCKET EXCEPTION ===`
+- `=== ❌ WEBSOCKET DISCONNECTED ❌ ===`
+
+### Check Browser Console
+Look for:
+- `✅ WebSocket Connected successfully`
+- `✅ Subscribed to /topic/call/X`
+- `Publishing call initiate...`
+- `Incoming message:`
+
+---
+
+## Still Having Issues?
+
+1. **Clear everything and start fresh:**
+   ```sql
+   -- Database
+   UPDATE call_history SET call_end_time = NOW() WHERE call_end_time IS NULL;
+   UPDATE user_master SET is_online = false;
+   
+   -- Redis (if using)
+   redis-cli FLUSHDB
+   ```
+
+2. **Restart backend server**
+
+3. **Hard refresh browser** (Ctrl+Shift+R or Cmd+Shift+R)
+
+4. **Check versions:**
+   - Node.js: v14+ recommended
+   - Spring Boot: 2.7+ or 3.x
+   - Browser: Chrome/Edge/Firefox latest
+
+5. **Enable verbose logging:**
+   In `CallContext.js`, all console.log statements are already in place.
+   In backend, ensure DEBUG level logging is enabled.
+
+---
+
+## Production Checklist
+
+Before deploying to production:
+- [ ] Remove console.log statements (or use proper logging)
+- [ ] Use HTTPS for WebSocket (wss://)
+- [ ] Implement proper authentication
+- [ ] Add rate limiting for call initiation
+- [ ] Set up monitoring for WebSocket connections
+- [ ] Configure proper CORS settings
+- [ ] Use environment variables for URLs
+- [ ] Implement proper error tracking (Sentry, etc.)
+- [ ] Add call quality metrics
+- [ ] Implement reconnection logic with exponential backoff
+- [ ] Add user presence indicators
+- [ ] Implement call history UI
+- [ ] Add notification sounds/vibrations
+- [ ] Test on mobile browsers
+- [ ] Test with poor network conditions
+- [ ] Load test with multiple concurrent calls

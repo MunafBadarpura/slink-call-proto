@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { useCall } from '../context/CallContext';
+import { AVAILABLE_USERS } from '../config/users';
 import './UserSelectionScreen.css';
-
-const MOCK_USERS = [
-  { id: 'user1', name: 'Alice Johnson' },
-  { id: 'user2', name: 'Bob Smith' },
-  { id: 'user3', name: 'Charlie Brown' },
-  { id: 'user4', name: 'Diana Prince' },
-  { id: 'user5', name: 'Ethan Hunt' }
-];
 
 const UserSelectionScreen = ({ currentUserId, currentUserName }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,11 +9,11 @@ const UserSelectionScreen = ({ currentUserId, currentUserName }) => {
 
   if (callState !== 'idle') return null;
 
-  const filteredUsers = MOCK_USERS.filter(
+  const filteredUsers = AVAILABLE_USERS.filter(
     user => 
       user.id !== currentUserId &&
       (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       user.id.toLowerCase().includes(searchQuery.toLowerCase()))
+       user.id.toString().includes(searchQuery))
   );
 
   const handleCallUser = (userId, userName, isVideo = false) => {
@@ -32,7 +25,7 @@ const UserSelectionScreen = ({ currentUserId, currentUserName }) => {
       <div className="header">
         <h1>Hannan Call</h1>
         <p className="subtitle">
-          Logged in as: <strong>{currentUserName}</strong> ({currentUserId})
+          Logged in as: <strong>{currentUserName}</strong> (User ID: {currentUserId})
         </p>
       </div>
 
@@ -57,7 +50,7 @@ const UserSelectionScreen = ({ currentUserId, currentUserName }) => {
               </div>
               <div className="user-info">
                 <div className="user-name">{user.name}</div>
-                <div className="user-id">{user.id}</div>
+                <div className="user-id">User ID: {user.id}</div>
               </div>
               <div className="call-buttons">
                 <button 
